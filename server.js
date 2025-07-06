@@ -41,7 +41,7 @@ app.post('/register', async (req, res) => {
   }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/login', async (req, res) => {
   const { mobile, password } = req.body;
   const [rows] = await db.execute('SELECT * FROM employees WHERE mobile = ?', [mobile]);
   if (rows.length === 0) return res.status(401).json({ message: 'Invalid credentials' });
