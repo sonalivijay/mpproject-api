@@ -19,7 +19,9 @@ const db = mysql.createPool({
 });
 
 const SECRET = 'your_secret_key'; // Replace with env var
-
+app.get('/', (req, res) => {
+  res.send('API is working ✅');
+});
 // === Auth Routes ===
 app.post('/register', async (req, res) => {
   const { mobile, password, name, district_id, designation_id, email } = req.body;
