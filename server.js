@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // ✅ for form data
 
 const db = mysql.createPool({
-  host: "mysql.railway.internal",
+  host: "crossover.proxy.rlwy.net",
   user: "root",
   password: "QfWUKwdGuSWIubQqaVxByCCEooVfwcKl",
   database: "mp_employees",
