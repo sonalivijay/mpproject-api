@@ -26,20 +26,44 @@ app.get('/', (req, res) => {
 // === Auth Routes ===
 app.post('/register', async (req, res) => {
   const { mobile, password, name, district_id, designation_id, email } = req.body;
+
   if (!mobile || !password || !name || !district_id || !designation_id) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-  const hashedPassword = await bcrypt.hash(password, 10);
+
   try {
+    // Check for duplicate mobile number
+    const [existingMobile] = await db.execute(
+      'SELECT id FROM employees WHERE mobile = ?',
+      [mobile]
+    );
+    if (existingMobile.length > 0) {
+      return res.status(409).json({ error: 'Employee with this mobile number already exists' });
+    }
+
+    // Check for existing employee with same district and designation
+    const [existingCombo] = await db.execute(
+      'SELECT id FROM employees WHERE district_id = ? AND designation_id = ?',
+      [district_id, designation_id]
+    );
+    if (existingCombo.length > 0) {
+      return res.status(409).json({ error: 'Employee with same district and designation already exists' });
+    }
+
+    // Proceed to insert
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     await db.execute(
       'INSERT INTO employees (mobile, password, name, district_id, designation_id, email) VALUES (?, ?, ?, ?, ?, ?)',
       [mobile, hashedPassword, name, district_id, designation_id, email]
     );
+
     res.json({ message: 'Registered successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 app.post('/login', async (req, res) => {
   const { mobile, password } = req.body;
@@ -183,7 +207,6 @@ app.put('/admin/employees/:id', async (req, res) => {
     }
 
     values.push(id); // For WHERE clause
-console.log("Update data:", { id, name, email, mobile, district_id, designation_id });
     const query = `UPDATE employees SET ${fields.join(', ')} WHERE id = ?`;
     await db.execute(query, values);
 
