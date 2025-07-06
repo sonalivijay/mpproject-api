@@ -19,7 +19,7 @@ const db = mysql.createPool({
 });
 
 const SECRET = 'your_secret_key'; // Replace with env var
-app.get('/emg', (req, res) => {
+app.get('/', (req, res) => {
   console.log("i ma in ")
   res.send('API is working ✅');
 });
