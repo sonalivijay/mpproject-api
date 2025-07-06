@@ -11,10 +11,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // ✅ for form data
 
 const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
+  host: "mysql.railway.internal",
+  user: "root",
+  password: "QfWUKwdGuSWIubQqaVxByCCEooVfwcKl",
+  database: "mp_employees",
   port:16007
 });
 
