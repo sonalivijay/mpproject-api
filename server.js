@@ -14,6 +14,7 @@ const db = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
+  port:16007
 });
 
 const SECRET = 'your_secret_key'; // Replace with env var
