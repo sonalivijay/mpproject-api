@@ -19,7 +19,8 @@ const db = mysql.createPool({
 });
 
 const SECRET = 'your_secret_key'; // Replace with env var
-app.get('/', (req, res) => {
+app.get('/emg', (req, res) => {
+  console.log("i ma in ")
   res.send('API is working ✅');
 });
 // === Auth Routes ===
@@ -195,5 +196,5 @@ console.log("Update data:", { id, name, email, mobile, district_id, designation_
 
 
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
