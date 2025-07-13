@@ -19,10 +19,12 @@ const db = mysql.createPool({
 });
 
 const SECRET = 'your_secret_key'; // Replace with env var
+
 app.get('/', (req, res) => {
   console.log("i ma in ")
   res.send('API is working ✅');
 });
+
 // === Auth Routes ===
 app.post('/register', async (req, res) => {
   const { mobile, password, name, district_id, designation_id, email } = req.body;
@@ -64,7 +66,6 @@ app.post('/register', async (req, res) => {
   }
 });
 
-
 app.post('/login', async (req, res) => {
   const { mobile, password } = req.body;
   const [rows] = await db.execute('SELECT * FROM employees WHERE mobile = ?', [mobile]);
@@ -72,7 +73,7 @@ app.post('/login', async (req, res) => {
   const isMatch = await bcrypt.compare(password, rows[0].password);
   if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
   const token = jwt.sign({ id: rows[0].id, role: rows[0].role }, SECRET);
-  res.json({ token, role: rows[0].role });
+  res.json({ token, role: rows[0].role, name: rows[0].name });
 });
 
 app.get('/profile', async (req, res) => {
@@ -148,25 +149,77 @@ app.put('/profile', async (req, res) => {
   }
 });
 
-
 // === Admin Route ===
 app.get('/admin/employees', async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth) return res.sendStatus(401);
+
+  try {
+    const token = auth.split(' ')[1];
+    const decoded = jwt.verify(token, SECRET);
+    if (decoded.role !== 'admin') return res.sendStatus(403);
+
+    const { district_id, designation_id } = req.query;
+
+    let query = `
+      SELECT e.id, e.name, e.mobile, e.email,
+             d.name AS district, g.name AS designation
+      FROM employees e
+      JOIN districts d ON e.district_id = d.id
+      JOIN designations g ON e.designation_id = g.id
+      WHERE 1=1
+    `;
+
+    const params = [];
+
+    if (district_id) {
+      query += ' AND e.district_id = ?';
+      params.push(district_id);
+    }
+
+    if (designation_id) {
+      query += ' AND e.designation_id = ?';
+      params.push(designation_id);
+    }
+
+    const [rows] = await db.execute(query, params);
+    res.json(rows);
+  } catch (error) {
+    console.error(error);
+    res.sendStatus(401);
+  }
+});
+
+
+app.get('/admin/dashboard', async (req, res) => {
   const auth = req.headers.authorization;
   if (!auth) return res.sendStatus(401);
   try {
     const token = auth.split(' ')[1];
     const decoded = jwt.verify(token, SECRET);
     if (decoded.role !== 'admin') return res.sendStatus(403);
-    const [rows] = await db.execute(
-      `SELECT e.id, e.name, e.mobile, e.email,
-              d.name AS district, g.name AS designation
-       FROM employees e
-       JOIN districts d ON e.district_id = d.id
-       JOIN designations g ON e.designation_id = g.id`
-    );
-    res.json(rows);
-  } catch {
-    res.sendStatus(401);
+
+    const [[{ count }]] = await db.execute('SELECT COUNT(*) AS count FROM employees');
+    const [districtCounts] = await db.execute(`
+      SELECT d.name AS district, COUNT(*) AS count
+      FROM employees e
+      JOIN districts d ON e.district_id = d.id
+      GROUP BY e.district_id
+    `);
+
+    const [designationCounts] = await db.execute(`
+      SELECT g.name AS designation, COUNT(*) AS count
+      FROM employees e
+      JOIN designations g ON e.designation_id = g.id
+      GROUP BY e.designation_id
+    `);
+    res.json({
+      totalEmployees: count,
+      employeesPerDistrict: districtCounts,
+      employeesByDesignation: designationCounts
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -188,6 +241,7 @@ app.get('/designations', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 app.put('/admin/employees/:id', async (req, res) => {
   const { id } = req.params;
   const { name, email, mobile, district_id, designation_id } = req.body;
@@ -216,8 +270,6 @@ app.put('/admin/employees/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
